@@ -8,7 +8,7 @@
 
 Local AI-powered security incident triage. Connect it to your SIEM, point it at a local Ollama model, and get instant analysis on every alert — nothing leaves your machine.
 
-![AgentZ Screenshot](screen3.png)
+![AgentZ Screenshot](https://github.com/zrnge/AgentZ/blob/main/Screen3.png)
 
 ---
 
