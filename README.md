@@ -114,19 +114,6 @@ Hit **Test Ollama Connection** to make sure the model is reachable, then click *
 
 ---
 
-## Deploying to GitHub Pages
-
-This is a single HTML file with no build step and no dependencies.
-
-1. Fork or clone this repo
-2. Go to **Settings → Pages** in your GitHub repo
-3. Set source to **Deploy from a branch**, pick `main`, root `/`
-4. Your instance will be live at `https://<your-username>.github.io/<repo-name>`
-
-That's it.
-
----
-
 ## Privacy
 
 - API tokens are stored in browser session memory only — they are never written to disk or sent anywhere except the SIEM endpoint you configure
