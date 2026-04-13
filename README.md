@@ -67,8 +67,6 @@ Any model works. Larger ones give better analysis — llama3.1 8B is a good star
 
 Go to **[zrnge.github.io/agentz](https://zrnge.github.io/agentz)** or open `index.html` locally in your browser.
 
-> **Note on HTTPS + Ollama:** GitHub Pages is served over HTTPS, which means the browser will block calls to `http://localhost` (mixed content). To use AgentZ from GitHub Pages, either run Ollama behind a reverse proxy with TLS, or just open the `index.html` file directly from your machine instead.
-
 ---
 
 ### 3. Configure
